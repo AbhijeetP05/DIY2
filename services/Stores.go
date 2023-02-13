@@ -19,6 +19,7 @@ type Stores struct {
 type IStores interface {
 	GetProducts(w http.ResponseWriter, r *http.Request)
 	AddProducts(w http.ResponseWriter, r *http.Request)
+	BuyProduct(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Stores) GetProducts(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +65,27 @@ func (s *Stores) AddProducts(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Success")
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+}
+
+func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
+	productId, _ := strconv.ParseInt(r.FormValue("productId"), 10, 64)
+	storeId, _ := strconv.ParseInt(r.FormValue("storeId"), 10, 64)
+	if productId == 0 || storeId == 0 {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store or Product ID")
+		return
+	}
+	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
+	orderId, err := storeModel.BuyProduct(s.conn)
+	if err != nil {
+		if err.Error() == "record not found" {
+			utils.RespondWithError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	payload := fmt.Sprintf("{orderId: %v}", orderId)
+	utils.RespondWithJSON(w, http.StatusOK, payload)
 }
 
 func NewStore(conn *gorm.DB) *Stores {

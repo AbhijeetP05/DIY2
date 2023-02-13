@@ -17,6 +17,7 @@ type App struct {
 	Router   *mux.Router
 	products services.IProducts
 	stores   services.IStores
+	orders   services.IOrders
 }
 
 // Initialize This function initializes the given application which will initialize the database and routes
@@ -35,6 +36,7 @@ func (a *App) Initialize(host, port, username, password, dbname string) {
 
 	a.products = services.NewProduct(a.DB)
 	a.stores = services.NewStore(a.DB)
+	a.orders = services.NewOrder(a.DB)
 	a.InitializeRoutes()
 	log.Println("Routes Initialized")
 }
@@ -62,5 +64,9 @@ func (a *App) InitializeRoutes() {
 
 	a.Router.HandleFunc("/stores/{id:[0-9]+}/products", a.stores.GetProducts).Methods("GET")
 	a.Router.HandleFunc("/stores/{id:[0-9]+}", a.stores.AddProducts).Methods("POST")
+	a.Router.HandleFunc("/stores/buyProduct", a.stores.BuyProduct).Methods("POST")
+
+	a.Router.HandleFunc("/recommendation/store/getTopProducts/{storeId:[0-9]+}", a.orders.TopProductsInStore).Methods("GET")
+	a.Router.HandleFunc("/recommendation/topProductsOFAllStores", a.orders.TopProductsForAllStores).Methods("GET")
 
 }

@@ -16,6 +16,7 @@ type StoreModel struct {
 type IStoreModel interface {
 	GetProductsInStore(db *gorm.DB, limit, start int) []ProductModel
 	AddProducts(db *gorm.DB, products []ProductModel) bool
+	BuyProduct(db *gorm.DB, productId int64) (int64, error)
 }
 
 func NewStore(storeId int64, productId int64, IsAvailable bool) *StoreModel {
@@ -76,6 +77,23 @@ func (s *StoreModel) AddProducts(db *gorm.DB, products []ProductModel) bool {
 	}
 	err := tx.Commit().Error
 	return err == nil
+}
+
+func (s *StoreModel) BuyProduct(db *gorm.DB) (int64, error) {
+	result := db.First(&s)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	orderModel := OrderModel{StoreId: s.StoreId, ProductId: s.ProductId}
+	err := orderModel.CreateOrder(db)
+	return orderModel.Id, err
+}
+
+func (s *StoreModel) GetAllStores(db *gorm.DB) ([]int64, error) {
+	var stores []int64
+	result := db.Model(&s).Select("distinct store_id").Order("store_id").Scan(&stores)
+
+	return stores, result.Error
 }
 
 func (s *StoreModel) TableName() string {
