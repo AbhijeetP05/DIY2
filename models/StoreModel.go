@@ -79,21 +79,16 @@ func (s *StoreModel) AddProducts(db *gorm.DB, products []ProductModel) bool {
 	return err == nil
 }
 
-func (s *StoreModel) BuyProduct(db *gorm.DB) (int64, error) {
-	result := db.First(&s)
-	if result.Error != nil {
-		return 0, result.Error
-	}
-	orderModel := OrderModel{StoreId: s.StoreId, ProductId: s.ProductId}
-	err := orderModel.CreateOrder(db)
-	return orderModel.Id, err
+func (s *StoreModel) ProductExists(db *gorm.DB) error {
+	err := db.First(&s).Error
+	return err
 }
 
 func (s *StoreModel) GetAllStores(db *gorm.DB) ([]int64, error) {
 	var stores []int64
-	result := db.Model(&s).Select("distinct store_id").Order("store_id").Scan(&stores)
+	err := db.Model(&s).Select("distinct store_id").Order("store_id").Scan(&stores).Error
 
-	return stores, result.Error
+	return stores, err
 }
 
 func (s *StoreModel) TableName() string {

@@ -3,7 +3,6 @@ package services
 import (
 	"DIY2/models"
 	"DIY2/utils"
-	"fmt"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 	"net/http"
@@ -32,7 +31,7 @@ func (o *Orders) TopProductsInStore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orderModel := models.OrderModel{StoreId: storeId}
-	orders, err := orderModel.GetTopOrders(o.conn)
+	orders, err := orderModel.GetTopOrders(o.conn, 1, 5)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -47,34 +46,37 @@ func (o *Orders) TopProductsForAllStores(w http.ResponseWriter, r *http.Request)
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	m := make(map[int64][]int64)
-	c := make(chan map[int64][]int64, len(stores))
+	responseMap := make(map[int64][]int64)
+	channel := make(chan map[int64][]int64, len(stores))
 	for i := 0; i < len(stores); i++ {
 		go func(c chan map[int64][]int64) {
-			orderModel := models.OrderModel{StoreId: stores[i]}
-			products, err := orderModel.GetTopOrders(o.conn)
+			err := o.getTopOrdersAllStores(c, stores[i], responseMap)
 			if err != nil {
 				utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 			}
+		}(channel)
 
-			m[orderModel.StoreId] = products
-			c <- m
-		}(c)
-
-		m = <-c
+		responseMap = <-channel
 	}
-	resp := make([]TopProductsResponse, len(stores))
+	payload := make([]TopProductsResponse, len(stores))
 	count := 0
-	for key, value := range m {
-		fmt.Println(key, value)
-		if len(value) > 2 {
-			value = value[0:2]
-		}
-		resp[count] = TopProductsResponse{StoreId: key, Products: value}
+	for key, value := range responseMap {
+		payload[count] = TopProductsResponse{StoreId: key, Products: value}
 		count++
 	}
+	utils.RespondWithJSON(w, http.StatusOK, payload)
+}
 
-	utils.RespondWithJSON(w, http.StatusOK, resp)
+func (o *Orders) getTopOrdersAllStores(c chan map[int64][]int64, storeId int64, responseMap map[int64][]int64) error {
+	orderModel := models.OrderModel{StoreId: storeId}
+	products, err := orderModel.GetTopOrders(o.conn, 1, 2)
+	if err != nil {
+		return err
+	}
+
+	responseMap[orderModel.StoreId] = products
+	c <- responseMap
+	return nil
 }
 
 func NewOrder(db *gorm.DB) *Orders {

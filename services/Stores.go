@@ -75,7 +75,7 @@ func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
-	orderId, err := storeModel.BuyProduct(s.conn)
+	err := storeModel.ProductExists(s.conn)
 	if err != nil {
 		if err.Error() == "record not found" {
 			utils.RespondWithError(w, http.StatusNotFound, err.Error())
@@ -84,7 +84,14 @@ func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	payload := fmt.Sprintf("{orderId: %v}", orderId)
+	orderModel := models.OrderModel{ProductId: storeModel.ProductId, StoreId: storeModel.StoreId}
+	err = orderModel.BuyProduct(s.conn)
+	if err != nil {
+		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	payload := fmt.Sprintf("{orderId: %v}", orderModel.Id)
 	utils.RespondWithJSON(w, http.StatusOK, payload)
 }
 
