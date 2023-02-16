@@ -1,7 +1,6 @@
 package models
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 )
 
@@ -11,46 +10,54 @@ type ProductModel struct {
 	Price float64 `json:"price"`
 }
 
+type ProductRepo struct {
+	conn *gorm.DB
+}
+
 //go:generate mockgen -destination=../mocks/store_mock.go -package=mocks go-mux/services IStores
-type IProductModel interface {
-	GetProduct(db *gorm.DB) *gorm.DB
-	GetProducts(db *gorm.DB, limit, start int) ([]ProductModel, *gorm.DB)
-	CreateProduct(db *gorm.DB) *gorm.DB
-	UpdateProduct(db *gorm.DB, newProduct *ProductModel) *gorm.DB
-	DeleteProduct(db *gorm.DB) *gorm.DB
+type IProductRepo interface {
+	GetProduct(p *ProductModel) *gorm.DB
+	GetProducts(p *ProductModel, limit, start int) ([]ProductModel, *gorm.DB)
+	CreateProduct(p *ProductModel) *gorm.DB
+	UpdateProduct(p *ProductModel, newProduct *ProductModel) *gorm.DB
+	DeleteProduct(p *ProductModel) *gorm.DB
+}
+
+func NewProductRepo(conn *gorm.DB) *ProductRepo {
+	return &ProductRepo{conn: conn}
 }
 
 func (*ProductModel) TableName() string {
 	return "products"
 }
 
-func (p *ProductModel) GetProduct(db *gorm.DB) *gorm.DB {
-	result := db.First(&p)
+func (pr *ProductRepo) GetProduct(p *ProductModel) *gorm.DB {
+	result := pr.conn.First(&p)
 	return result
 }
 
-func (p *ProductModel) GetProducts(db *gorm.DB, limit, start int) ([]ProductModel, *gorm.DB) {
+func (pr *ProductRepo) GetProducts(p *ProductModel, limit, start int) ([]ProductModel, *gorm.DB) {
 	var products []ProductModel
-	result := db.Model(ProductModel{}).Offset(start).Limit(limit).Find(&products)
+	result := pr.conn.Model(ProductModel{}).Offset(start).Limit(limit).Find(&products)
 
 	return products, result
 }
 
-func (p *ProductModel) CreateProduct(db *gorm.DB) *gorm.DB {
-	fmt.Println(p.ID)
-	result := db.Create(&p)
+func (pr *ProductRepo) CreateProduct(p *ProductModel) *gorm.DB {
+	//fmt.Println(p.ID)
+	result := pr.conn.Create(&p)
 
 	return result
 }
 
-func (p *ProductModel) UpdateProduct(db *gorm.DB, newProduct *ProductModel) *gorm.DB {
-	result := db.Model(&p).Updates(newProduct)
+func (pr *ProductRepo) UpdateProduct(p *ProductModel, newProduct *ProductModel) *gorm.DB {
+	result := pr.conn.Model(&p).Updates(newProduct)
 
 	return result
 }
 
-func (p *ProductModel) DeleteProduct(db *gorm.DB) *gorm.DB {
-	result := db.Delete(&p)
+func (pr *ProductRepo) DeleteProduct(p *ProductModel) *gorm.DB {
+	result := pr.conn.Delete(&p)
 
 	return result
 }

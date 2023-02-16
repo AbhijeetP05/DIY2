@@ -4,15 +4,16 @@ import (
 	"DIY2/models"
 	"DIY2/utils"
 	"github.com/gorilla/mux"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 )
 
 type Orders struct {
-	conn *gorm.DB
+	orderRepo models.IOrderRepo
+	storeRepo models.IStoreRepo
 }
 
+//go:generate mockgen -destination=../mocks/order_mock.go -package=mocks DIY2/services IOrders
 type IOrders interface {
 	TopProductsInStore(w http.ResponseWriter, r *http.Request)
 	TopProductsForAllStores(w http.ResponseWriter, r *http.Request)
@@ -31,7 +32,7 @@ func (o *Orders) TopProductsInStore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orderModel := models.OrderModel{StoreId: storeId}
-	orders, err := orderModel.GetTopOrders(o.conn, 1, 5)
+	orders, err := o.orderRepo.GetTopOrders(&orderModel, 1, 5)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -41,7 +42,7 @@ func (o *Orders) TopProductsInStore(w http.ResponseWriter, r *http.Request) {
 
 func (o *Orders) TopProductsForAllStores(w http.ResponseWriter, r *http.Request) {
 	storeModel := models.StoreModel{}
-	stores, err := storeModel.GetAllStores(o.conn)
+	stores, err := o.storeRepo.GetAllStores(&storeModel)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -69,7 +70,7 @@ func (o *Orders) TopProductsForAllStores(w http.ResponseWriter, r *http.Request)
 
 func (o *Orders) getTopOrdersAllStores(c chan map[int64][]int64, storeId int64, responseMap map[int64][]int64) error {
 	orderModel := models.OrderModel{StoreId: storeId}
-	products, err := orderModel.GetTopOrders(o.conn, 1, 2)
+	products, err := o.orderRepo.GetTopOrders(&orderModel, 1, 2)
 	if err != nil {
 		return err
 	}
@@ -79,6 +80,6 @@ func (o *Orders) getTopOrdersAllStores(c chan map[int64][]int64, storeId int64, 
 	return nil
 }
 
-func NewOrder(db *gorm.DB) *Orders {
-	return &Orders{conn: db}
+func NewOrder(storeRepo models.IStoreRepo, orderRepo models.IOrderRepo) *Orders {
+	return &Orders{storeRepo: storeRepo, orderRepo: orderRepo}
 }

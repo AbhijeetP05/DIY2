@@ -12,7 +12,7 @@ import (
 )
 
 type Products struct {
-	conn *gorm.DB
+	productRepo models.IProductRepo
 }
 
 //go:generate mockgen -destination=../mocks/mock_product.go -package=mocks go-mux/services IProducts
@@ -33,7 +33,7 @@ func (p *Products) GetProduct(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("Invalid Product ID")
 	}
 	productModel := models.ProductModel{ID: &id}
-	result := productModel.GetProduct(p.conn)
+	result := p.productRepo.GetProduct(&productModel)
 
 	if result.Error != nil && result.Error == gorm.ErrRecordNotFound {
 		utils.RespondWithError(w, http.StatusNotFound, "Product Not Found")
@@ -49,7 +49,7 @@ func (p *Products) GetProducts(w http.ResponseWriter, r *http.Request) {
 	start, _ := strconv.Atoi(r.FormValue("start"))
 
 	productModel := models.ProductModel{}
-	products, result := productModel.GetProducts(p.conn, limit, start)
+	products, result := p.productRepo.GetProducts(&productModel, limit, start)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 	} else {
@@ -65,7 +65,7 @@ func (p *Products) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer r.Body.Close()
-	result := product.CreateProduct(p.conn)
+	result := p.productRepo.CreateProduct(&product)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 		return
@@ -83,7 +83,7 @@ func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product := models.ProductModel{ID: &id}
-	result := product.GetProduct(p.conn)
+	result := p.productRepo.GetProduct(&product)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 		return
@@ -101,7 +101,7 @@ func (p *Products) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result = product.UpdateProduct(p.conn, &newProduct)
+	result = p.productRepo.UpdateProduct(&product, &newProduct)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 		return
@@ -118,7 +118,7 @@ func (p *Products) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	product := models.ProductModel{ID: &id}
-	result := product.GetProduct(p.conn)
+	result := p.productRepo.GetProduct(&product)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 		return
@@ -129,13 +129,13 @@ func (p *Products) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// delete the product
-	result = product.DeleteProduct(p.conn)
+	result = p.productRepo.DeleteProduct(&product)
 	if result.Error != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, result.Error.Error())
 	}
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
 }
 
-func NewProduct(conn *gorm.DB) *Products {
-	return &Products{conn}
+func NewProduct(repo models.IProductRepo) *Products {
+	return &Products{productRepo: repo}
 }

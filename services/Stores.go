@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 )
 
 type Stores struct {
-	conn *gorm.DB
+	storeRepo models.IStoreRepo
+	orderRepo models.IOrderRepo
 }
 
 //go:generate mockgen -destination=../mocks/store_mock.go -package=mocks go-mux/services IStores
@@ -32,7 +32,7 @@ func (s *Stores) GetProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	store := models.StoreModel{StoreId: int64(id)}
-	products := store.GetProductsInStore(s.conn, limit, start)
+	products := s.storeRepo.GetProductsInStore(&store, limit, start)
 
 	if products == nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Some Error Occurred")
@@ -58,7 +58,7 @@ func (s *Stores) AddProducts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("%v", products)
-	result := store.AddProducts(s.conn, products)
+	result := s.storeRepo.AddProducts(&store, products)
 	if !result {
 		utils.RespondWithError(w, http.StatusInternalServerError, "Some Error Occurred")
 		return
@@ -75,7 +75,7 @@ func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
-	err := storeModel.ProductExists(s.conn)
+	err := s.storeRepo.ProductExists(&storeModel)
 	if err != nil {
 		if err.Error() == "record not found" {
 			utils.RespondWithError(w, http.StatusNotFound, err.Error())
@@ -85,7 +85,7 @@ func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orderModel := models.OrderModel{ProductId: storeModel.ProductId, StoreId: storeModel.StoreId}
-	err = orderModel.BuyProduct(s.conn)
+	err = s.orderRepo.BuyProduct(&orderModel)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -95,6 +95,6 @@ func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, http.StatusOK, payload)
 }
 
-func NewStore(conn *gorm.DB) *Stores {
-	return &Stores{conn: conn}
+func NewStore(orderRepo models.IOrderRepo, storeRepo models.IStoreRepo) *Stores {
+	return &Stores{orderRepo: orderRepo, storeRepo: storeRepo}
 }

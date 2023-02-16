@@ -13,21 +13,29 @@ type OrderModel struct {
 	SoldAt    time.Time `json:"soldAt" gorm:"default:CURRENT_TIMESTAMP"`
 }
 
-type IOrderModel interface {
-	CreateOrder(db *gorm.DB) error
-	GetTopOrders(db *gorm.DB) ([]int64, error)
+type OrderRepo struct {
+	conn *gorm.DB
 }
 
-func (m *OrderModel) BuyProduct(db *gorm.DB) error {
-	result := db.Create(&m)
+//go:generate mockgen -destination=../mocks/orderModel_mock.go -package=mocks go-mux/services IStores
+type IOrderRepo interface {
+	BuyProduct(orderModel *OrderModel) error
+	GetTopOrders(orderModel *OrderModel, interval int64, limit int) ([]int64, error)
+}
+
+func NewOrderRepo(conn *gorm.DB) *OrderRepo {
+	return &OrderRepo{conn: conn}
+}
+
+func (m *OrderRepo) BuyProduct(orderModel *OrderModel) error {
+	result := m.conn.Create(&orderModel)
 	return result.Error
 }
 
-func (m *OrderModel) GetTopOrders(db *gorm.DB, interval int64, limit int) ([]int64, error) {
+func (m *OrderRepo) GetTopOrders(orderModel *OrderModel, interval int64, limit int) ([]int64, error) {
 	var products []int64
-	fmt.Println(interval)
-	whereQuery := fmt.Sprintf("sold_at>=now()-interval '%v hour' and STORE_ID = %v", interval, m.StoreId)
-	err := db.Select("product_id").Group("product_id").Where(whereQuery).Order("count(product_id) desc").Limit(limit).Table("orders").Find(&products).Error
+	whereQuery := fmt.Sprintf("sold_at>=now()-interval '%v hour' and STORE_ID = %v", interval, orderModel.StoreId)
+	err := m.conn.Select("product_id").Group("product_id").Where(whereQuery).Order("count(product_id) desc").Limit(limit).Table("orders").Find(&products).Error
 	return products, err
 }
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"DIY2/models"
 	"DIY2/services"
 	"encoding/json"
 	"fmt"
@@ -13,11 +14,14 @@ import (
 
 // App main app for the program to run, contains a gorm database instance and a router instance for routing
 type App struct {
-	DB       *gorm.DB
-	Router   *mux.Router
-	products services.IProducts
-	stores   services.IStores
-	orders   services.IOrders
+	DB          *gorm.DB
+	Router      *mux.Router
+	storeRepo   models.IStoreRepo
+	orderRepo   models.IOrderRepo
+	productRepo models.IProductRepo
+	products    services.IProducts
+	stores      services.IStores
+	orders      services.IOrders
 }
 
 // Initialize This function initializes the given application which will initialize the database and routes
@@ -30,13 +34,15 @@ func (a *App) Initialize(host, port, username, password, dbname string) {
 	}
 	log.Println("Database Initialized")
 	a.Router = mux.NewRouter()
-	//p := models.ProductModel{ID: 2}
-	//p.GetProduct(a.DB)
-	//fmt.Println(p.ID, p.Name, p.Price)
 
-	a.products = services.NewProduct(a.DB)
-	a.stores = services.NewStore(a.DB)
-	a.orders = services.NewOrder(a.DB)
+	a.productRepo = models.NewProductRepo(a.DB)
+	a.orderRepo = models.NewOrderRepo(a.DB)
+	a.storeRepo = models.NewStoreRepo(a.DB)
+
+	a.products = services.NewProduct(a.productRepo)
+	a.orders = services.NewOrder(a.storeRepo, a.orderRepo)
+	a.stores = services.NewStore(a.orderRepo, a.storeRepo)
+
 	a.InitializeRoutes()
 	log.Println("Routes Initialized")
 }
