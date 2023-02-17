@@ -2,6 +2,7 @@ package services
 
 import (
 	"DIY2/models"
+	"fmt"
 )
 
 type Orders struct {
@@ -11,6 +12,7 @@ type Orders struct {
 
 //go:generate mockgen -destination=../mocks/order_mock.go -package=mocks DIY2/services IOrders
 type IOrders interface {
+	BuyProduct(productId, storeId int64) (string, error)
 	TopProductsInStore(storeId int64) ([]int64, error)
 	TopProductsForAllStores() ([]TopProductsResponse, error)
 }
@@ -18,6 +20,23 @@ type IOrders interface {
 type TopProductsResponse struct {
 	StoreId  int64   `json:"store_id"`
 	Products []int64 `json:"products"`
+}
+
+func (o *Orders) BuyProduct(productId, storeId int64) (string, error) {
+
+	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
+	err := o.storeRepo.ProductExists(&storeModel)
+	if err != nil {
+		return "", err
+	}
+	orderModel := models.OrderModel{ProductId: storeModel.ProductId, StoreId: storeModel.StoreId}
+	err = o.orderRepo.BuyProduct(&orderModel)
+	if err != nil {
+		return "", err
+	}
+
+	payload := fmt.Sprintf("{orderId: %v}", orderModel.Id)
+	return payload, nil
 }
 
 func (o *Orders) TopProductsInStore(storeId int64) ([]int64, error) {

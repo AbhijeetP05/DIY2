@@ -49,21 +49,6 @@ func (mr *MockIStoresMockRecorder) AddProducts(arg0, arg1 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddProducts", reflect.TypeOf((*MockIStores)(nil).AddProducts), arg0, arg1)
 }
 
-// BuyProduct mocks base method.
-func (m *MockIStores) BuyProduct(arg0, arg1 int64) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BuyProduct", arg0, arg1)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// BuyProduct indicates an expected call of BuyProduct.
-func (mr *MockIStoresMockRecorder) BuyProduct(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuyProduct", reflect.TypeOf((*MockIStores)(nil).BuyProduct), arg0, arg1)
-}
-
 // GetProducts mocks base method.
 func (m *MockIStores) GetProducts(arg0 int64, arg1, arg2 int) ([]models.ProductModel, error) {
 	m.ctrl.T.Helper()

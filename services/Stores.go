@@ -7,15 +7,14 @@ import (
 )
 
 type Stores struct {
-	storeRepo models.IStoreRepo
-	orderRepo models.IOrderRepo
+	storeRepo   models.IStoreRepo
+	productRepo models.IProductRepo
 }
 
 //go:generate mockgen -destination=../mocks/store_mock.go -package=mocks DIY2/services IStores
 type IStores interface {
 	GetProducts(id int64, limit, start int) ([]models.ProductModel, error)
 	AddProducts(id int64, products []models.ProductModel) (map[string]string, error)
-	BuyProduct(productId, storeId int64) (string, error)
 }
 
 func (s *Stores) GetProducts(id int64, limit, start int) ([]models.ProductModel, error) {
@@ -43,23 +42,6 @@ func (s *Stores) AddProducts(id int64, products []models.ProductModel) (map[stri
 	return payload, nil
 }
 
-func (s *Stores) BuyProduct(productId, storeId int64) (string, error) {
-
-	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
-	err := s.storeRepo.ProductExists(&storeModel)
-	if err != nil {
-		return "", err
-	}
-	orderModel := models.OrderModel{ProductId: storeModel.ProductId, StoreId: storeModel.StoreId}
-	err = s.orderRepo.BuyProduct(&orderModel)
-	if err != nil {
-		return "", err
-	}
-
-	payload := fmt.Sprintf("{orderId: %v}", orderModel.Id)
-	return payload, nil
-}
-
-func NewStore(orderRepo models.IOrderRepo, storeRepo models.IStoreRepo) *Stores {
-	return &Stores{orderRepo: orderRepo, storeRepo: storeRepo}
+func NewStore(productRepo models.IProductRepo, storeRepo models.IStoreRepo) *Stores {
+	return &Stores{productRepo: productRepo, storeRepo: storeRepo}
 }

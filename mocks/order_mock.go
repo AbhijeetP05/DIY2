@@ -34,6 +34,21 @@ func (m *MockIOrders) EXPECT() *MockIOrdersMockRecorder {
 	return m.recorder
 }
 
+// BuyProduct mocks base method.
+func (m *MockIOrders) BuyProduct(arg0, arg1 int64) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuyProduct", arg0, arg1)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuyProduct indicates an expected call of BuyProduct.
+func (mr *MockIOrdersMockRecorder) BuyProduct(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuyProduct", reflect.TypeOf((*MockIOrders)(nil).BuyProduct), arg0, arg1)
+}
+
 // TopProductsForAllStores mocks base method.
 func (m *MockIOrders) TopProductsForAllStores() ([]services.TopProductsResponse, error) {
 	m.ctrl.T.Helper()

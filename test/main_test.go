@@ -37,3 +37,7 @@ func checkResponseCode(t *testing.T, expected, actual int) {
 		t.Errorf("Expected response code %d. Got %d\n", expected, actual)
 	}
 }
+
+func clearDatabase() {
+	a.DB.Exec("TRUNCATE TABLE products, stores, orders;")
+}

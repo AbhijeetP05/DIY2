@@ -20,6 +20,7 @@ type OrderServiceImplTestSuite struct {
 }
 
 func (suite *OrderServiceImplTestSuite) BeforeTest(suiteName, testName string) {
+	//clearDatabase()
 	ctrl := gomock.NewController(suite.T())
 	suite.ctrl = ctrl
 	suite.orderRepo = mocks.NewMockIOrderRepo(suite.ctrl)
@@ -29,6 +30,31 @@ func (suite *OrderServiceImplTestSuite) BeforeTest(suiteName, testName string) {
 
 func (suite *OrderServiceImplTestSuite) AfterTest(suiteName, testName string) {
 	suite.ctrl.Finish()
+}
+
+func (suite *OrderServiceImplTestSuite) TestBuyProduct_Success() {
+	storeModel := models.StoreModel{StoreId: 1, ProductId: 2, IsAvailable: true}
+	suite.storeRepo.EXPECT().ProductExists(&storeModel).Return(nil)
+
+	orderModel := models.OrderModel{StoreId: storeModel.StoreId, ProductId: storeModel.ProductId}
+	//responseOrderModel := models.OrderModel{Id: 1, SoldAt: time.Now(), StoreId: storeModel.StoreId, ProductId: storeModel.ProductId}
+	suite.orderRepo.EXPECT().BuyProduct(&orderModel).Return(nil)
+
+	_, err := suite.orderServiceImpl.BuyProduct(orderModel.ProductId, orderModel.StoreId)
+	assert.Nil(suite.T(), err)
+}
+
+func (suite *OrderServiceImplTestSuite) TestBuyProduct_Error() {
+
+	expectedError := sql.ErrNoRows
+	storeModel := models.StoreModel{StoreId: 1, ProductId: 2, IsAvailable: true}
+	suite.storeRepo.EXPECT().ProductExists(&storeModel).Return(expectedError)
+
+	//orderModel := models.OrderModel{StoreId: storeModel.StoreId, ProductId: storeModel.ProductId}
+	//suite.orderRepo.EXPECT().BuyProduct(&orderModel).Return(nil)
+
+	_, err := suite.orderServiceImpl.BuyProduct(storeModel.ProductId, storeModel.StoreId)
+	assert.NotNil(suite.T(), err)
 }
 
 func (suite *OrderServiceImplTestSuite) TestGetTopProductsForStoreWithWrongStoreID() {

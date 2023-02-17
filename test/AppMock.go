@@ -43,7 +43,7 @@ func (a *App) Initialize(host, port, username, password, dbname string) {
 
 	a.products = services.NewProduct(a.productRepo)
 	a.orders = services.NewOrder(a.storeRepo, a.orderRepo)
-	a.stores = services.NewStore(a.orderRepo, a.storeRepo)
+	a.stores = services.NewStore(a.productRepo, a.storeRepo)
 
 	a.InitializeRoutes()
 	log.Println("Routes Initialized")
@@ -125,7 +125,7 @@ func (a *App) BuyProduct(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store or Product ID")
 		return
 	}
-	payload, err := a.stores.BuyProduct(productId, storeId)
+	payload, err := a.orders.BuyProduct(productId, storeId)
 	if err != nil {
 		if err.Error() == "record not found" {
 			utils.RespondWithError(w, http.StatusNotFound, err.Error())

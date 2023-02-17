@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"github.com/golang/mock/gomock"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 	"testing"
 )
 
@@ -91,73 +88,5 @@ func TestAddProductsSuccess(t *testing.T) {
 	checkResponseCode(t, http.StatusOK, response.Code)
 	if finalCount != initialCount+1 {
 		t.Errorf("product not added added.")
-	}
-}
-
-func TestBuyProductSuccess(t *testing.T) {
-	query := "SELECT * FROM orders"
-	result := a.DB.Exec(query)
-	initialCount := result.RowsAffected
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	var storeId, productId int64
-	storeId = 1
-	productId = 2
-	form := url.Values{}
-	form.Add("storeId", strconv.FormatInt(storeId, 10))
-	form.Add("productId", strconv.FormatInt(productId, 10))
-	req, _ := http.NewRequest("POST", "/stores/buyProduct", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	//response := executePostRequest("/stores/buyProduct/", form)
-	response := executeRequest(req)
-	result = a.DB.Exec(query)
-	finalCount := result.RowsAffected
-	checkResponseCode(t, http.StatusOK, response.Code)
-	if finalCount != initialCount+1 {
-		t.Errorf("order not added.")
-	}
-}
-
-func TestBuyProduct_NoFormData(t *testing.T) {
-	query := "SELECT * FROM orders"
-	result := a.DB.Exec(query)
-	initialCount := result.RowsAffected
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	req, _ := http.NewRequest("POST", "/stores/buyProduct", nil)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	response := executeRequest(req)
-	result = a.DB.Exec(query)
-	finalCount := result.RowsAffected
-
-	checkResponseCode(t, http.StatusBadRequest, response.Code)
-	if finalCount != initialCount {
-		t.Errorf("order added while it was not expected to.")
-	}
-}
-
-func TestBuyProductFail(t *testing.T) {
-	query := "SELECT * FROM orders"
-	result := a.DB.Exec(query)
-	initialCount := result.RowsAffected
-	mockCtrl := gomock.NewController(t)
-	defer mockCtrl.Finish()
-
-	var storeId, productId int64
-	storeId = 1
-	productId = 1
-	form := url.Values{}
-	form.Add("storeId", strconv.FormatInt(storeId, 10))
-	form.Add("productId", strconv.FormatInt(productId, 10))
-	req, _ := http.NewRequest("POST", "/stores/buyProduct", strings.NewReader(form.Encode()))
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	response := executeRequest(req)
-	result = a.DB.Exec(query)
-	finalCount := result.RowsAffected
-	checkResponseCode(t, http.StatusNotFound, response.Code)
-	if finalCount != initialCount {
-		t.Errorf("non existent orderorder added.")
 	}
 }
