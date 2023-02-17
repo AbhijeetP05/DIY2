@@ -2,12 +2,8 @@ package services
 
 import (
 	"DIY2/models"
-	"DIY2/utils"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/gorilla/mux"
-	"net/http"
-	"strconv"
 )
 
 type Stores struct {
@@ -17,82 +13,51 @@ type Stores struct {
 
 //go:generate mockgen -destination=../mocks/store_mock.go -package=mocks go-mux/services IStores
 type IStores interface {
-	GetProducts(w http.ResponseWriter, r *http.Request)
-	AddProducts(w http.ResponseWriter, r *http.Request)
-	BuyProduct(w http.ResponseWriter, r *http.Request)
+	GetProducts(id int64, limit, start int) ([]models.ProductModel, error)
+	AddProducts(id int64, products []models.ProductModel) (map[string]string, error)
+	BuyProduct(productId, storeId int64) (string, error)
 }
 
-func (s *Stores) GetProducts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	limit, _ := strconv.Atoi(r.FormValue("limit"))
-	start, _ := strconv.Atoi(r.FormValue("start"))
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store ID")
-		return
-	}
-	store := models.StoreModel{StoreId: int64(id)}
+func (s *Stores) GetProducts(id int64, limit, start int) ([]models.ProductModel, error) {
+
+	store := models.StoreModel{StoreId: id}
 	products := s.storeRepo.GetProductsInStore(&store, limit, start)
 
 	if products == nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Some Error Occurred")
-		return
+		return nil, errors.New("some error occurred")
 	}
-	utils.RespondWithJSON(w, http.StatusOK, products)
+	return products, nil
 }
 
-func (s *Stores) AddProducts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store ID")
-		return
-	}
+func (s *Stores) AddProducts(id int64, products []models.ProductModel) (map[string]string, error) {
 
 	store := models.StoreModel{StoreId: int64(id)}
-	var products []models.ProductModel
-	decoder := json.NewDecoder(r.Body)
 
-	if err := decoder.Decode(&products); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	fmt.Printf("%v", products)
 	result := s.storeRepo.AddProducts(&store, products)
 	if !result {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Some Error Occurred")
-		return
+		return nil, errors.New("some error occurred")
 	}
 	fmt.Println("Success")
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"result": "success"})
+	payload := map[string]string{"result": "success"}
+	return payload, nil
 }
 
-func (s *Stores) BuyProduct(w http.ResponseWriter, r *http.Request) {
-	productId, _ := strconv.ParseInt(r.FormValue("productId"), 10, 64)
-	storeId, _ := strconv.ParseInt(r.FormValue("storeId"), 10, 64)
-	if productId == 0 || storeId == 0 {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store or Product ID")
-		return
-	}
+func (s *Stores) BuyProduct(productId, storeId int64) (string, error) {
+
 	storeModel := models.StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: true}
 	err := s.storeRepo.ProductExists(&storeModel)
 	if err != nil {
-		if err.Error() == "record not found" {
-			utils.RespondWithError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+		return "", err
 	}
 	orderModel := models.OrderModel{ProductId: storeModel.ProductId, StoreId: storeModel.StoreId}
 	err = s.orderRepo.BuyProduct(&orderModel)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+		return "", err
 	}
 
 	payload := fmt.Sprintf("{orderId: %v}", orderModel.Id)
-	utils.RespondWithJSON(w, http.StatusOK, payload)
+	return payload, nil
 }
 
 func NewStore(orderRepo models.IOrderRepo, storeRepo models.IStoreRepo) *Stores {

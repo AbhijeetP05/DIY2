@@ -2,10 +2,6 @@ package services
 
 import (
 	"DIY2/models"
-	"DIY2/utils"
-	"github.com/gorilla/mux"
-	"net/http"
-	"strconv"
 )
 
 type Orders struct {
@@ -15,8 +11,8 @@ type Orders struct {
 
 //go:generate mockgen -destination=../mocks/order_mock.go -package=mocks DIY2/services IOrders
 type IOrders interface {
-	TopProductsInStore(w http.ResponseWriter, r *http.Request)
-	TopProductsForAllStores(w http.ResponseWriter, r *http.Request)
+	TopProductsInStore(storeId int64) ([]int64, error)
+	TopProductsForAllStores() ([]TopProductsResponse, error)
 }
 
 type TopProductsResponse struct {
@@ -24,39 +20,36 @@ type TopProductsResponse struct {
 	Products []int64 `json:"products"`
 }
 
-func (o *Orders) TopProductsInStore(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	storeId, err := strconv.ParseInt(vars["storeId"], 10, 64)
-	if err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid Store ID")
-		return
-	}
+func (o *Orders) TopProductsInStore(storeId int64) ([]int64, error) {
+
 	orderModel := models.OrderModel{StoreId: storeId}
 	orders, err := o.orderRepo.GetTopOrders(&orderModel, 1, 5)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
-	utils.RespondWithJSON(w, http.StatusOK, orders)
+	return orders, nil
 }
 
-func (o *Orders) TopProductsForAllStores(w http.ResponseWriter, r *http.Request) {
+func (o *Orders) TopProductsForAllStores() ([]TopProductsResponse, error) {
 	storeModel := models.StoreModel{}
 	stores, err := o.storeRepo.GetAllStores(&storeModel)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+		return nil, err
 	}
 	responseMap := make(map[int64][]int64)
 	channel := make(chan map[int64][]int64, len(stores))
+	var goErr error
 	for i := 0; i < len(stores); i++ {
 		go func(c chan map[int64][]int64) {
 			err := o.getTopOrdersAllStores(c, stores[i], responseMap)
 			if err != nil {
-				utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+				goErr = err
+				return
 			}
 		}(channel)
-
+		if goErr != nil {
+			return nil, goErr
+		}
 		responseMap = <-channel
 	}
 	payload := make([]TopProductsResponse, len(stores))
@@ -65,7 +58,7 @@ func (o *Orders) TopProductsForAllStores(w http.ResponseWriter, r *http.Request)
 		payload[count] = TopProductsResponse{StoreId: key, Products: value}
 		count++
 	}
-	utils.RespondWithJSON(w, http.StatusOK, payload)
+	return payload, nil
 }
 
 func (o *Orders) getTopOrdersAllStores(c chan map[int64][]int64, storeId int64, responseMap map[int64][]int64) error {
