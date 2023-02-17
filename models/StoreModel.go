@@ -12,29 +12,35 @@ type StoreModel struct {
 	IsAvailable bool         `json:"isAvailable"`
 }
 
+type StoreRepo struct {
+	conn *gorm.DB
+}
+
 //go:generate mockgen -destination=../mocks/storeModel_mock.go -package=mocks go-mux/models IStoreModel
-type IStoreModel interface {
-	GetProductsInStore(db *gorm.DB, limit, start int) []ProductModel
-	AddProducts(db *gorm.DB, products []ProductModel) bool
+type IStoreRepo interface {
+	GetProductsInStore(storeModel *StoreModel, limit, start int) []ProductModel
+	AddProducts(storeModel *StoreModel, products []ProductModel) bool
+	ProductExists(storeModel *StoreModel) error
+	GetAllStores(storeModel *StoreModel) ([]int64, error)
 }
 
-func NewStore(storeId int64, productId int64, IsAvailable bool) *StoreModel {
-	return &StoreModel{StoreId: storeId, ProductId: productId, IsAvailable: IsAvailable}
+func NewStoreRepo(conn *gorm.DB) *StoreRepo {
+	return &StoreRepo{conn: conn}
 }
 
-func (s *StoreModel) GetProductsInStore(db *gorm.DB, limit, start int) []ProductModel {
+func (sr *StoreRepo) GetProductsInStore(s *StoreModel, limit, start int) []ProductModel {
 	var productsInStore []StoreModel
 	var products []ProductModel
-	result := db.Model(&StoreModel{}).Where("store_id = ?", s.StoreId).Limit(limit).Offset(start).Find(&productsInStore)
+	result := sr.conn.Model(&StoreModel{}).Where("store_id = ?", s.StoreId).Limit(limit).Offset(start).Find(&productsInStore)
 
 	if result.Error != nil {
 		fmt.Println("Some error occurred")
 		return nil
 	}
-	tx := db.Begin()
+	tx := sr.conn.Begin()
 	for i := 0; i < len(productsInStore); i++ {
 		p := ProductModel{ID: &productsInStore[i].ProductId}
-		result := db.First(&p)
+		result := sr.conn.First(&p)
 		if result.Error != nil {
 			tx.Rollback()
 			break
@@ -49,11 +55,11 @@ func (s *StoreModel) GetProductsInStore(db *gorm.DB, limit, start int) []Product
 	return products
 }
 
-func (s *StoreModel) AddProducts(db *gorm.DB, products []ProductModel) bool {
+func (sr *StoreRepo) AddProducts(s *StoreModel, products []ProductModel) bool {
 
-	tx := db.Begin()
+	tx := sr.conn.Begin()
 	for i := 0; i < len(products); i++ {
-		res := db.Create(&products[i])
+		res := sr.conn.Create(&products[i])
 		fmt.Println(products[i].ID, products[i].Name)
 		if res.Error != nil {
 			tx.Rollback()
@@ -62,9 +68,9 @@ func (s *StoreModel) AddProducts(db *gorm.DB, products []ProductModel) bool {
 
 		s.ProductId = *products[i].ID
 		s.IsAvailable = true
-		result := db.Model(&s).Where("store_id = ? and product_id = ?", s.StoreId, s.ProductId).Updates(&s)
+		result := sr.conn.Model(&s).Where("store_id = ? and product_id = ?", s.StoreId, s.ProductId).Updates(&s)
 		if result.RowsAffected == 0 {
-			result = db.Create(&s)
+			result = sr.conn.Create(&s)
 		}
 		if result.Error != nil {
 			tx.Rollback()
@@ -76,6 +82,18 @@ func (s *StoreModel) AddProducts(db *gorm.DB, products []ProductModel) bool {
 	}
 	err := tx.Commit().Error
 	return err == nil
+}
+
+func (sr *StoreRepo) ProductExists(s *StoreModel) error {
+	err := sr.conn.First(&s).Error
+	return err
+}
+
+func (sr *StoreRepo) GetAllStores(s *StoreModel) ([]int64, error) {
+	var stores []int64
+	err := sr.conn.Model(&s).Select("distinct store_id").Order("store_id").Scan(&stores).Error
+
+	return stores, err
 }
 
 func (s *StoreModel) TableName() string {
