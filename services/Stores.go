@@ -11,7 +11,7 @@ type Stores struct {
 	orderRepo models.IOrderRepo
 }
 
-//go:generate mockgen -destination=../mocks/store_mock.go -package=mocks go-mux/services IStores
+//go:generate mockgen -destination=../mocks/store_mock.go -package=mocks DIY2/services IStores
 type IStores interface {
 	GetProducts(id int64, limit, start int) ([]models.ProductModel, error)
 	AddProducts(id int64, products []models.ProductModel) (map[string]string, error)

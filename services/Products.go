@@ -15,7 +15,7 @@ type Products struct {
 	productRepo models.IProductRepo
 }
 
-//go:generate mockgen -destination=../mocks/mock_product.go -package=mocks go-mux/services IProducts
+//go:generate mockgen -destination=../mocks/mock_product.go -package=mocks DIY2/services IProducts
 type IProducts interface {
 	GetProduct(w http.ResponseWriter, r *http.Request)
 	GetProducts(w http.ResponseWriter, r *http.Request)

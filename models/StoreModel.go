@@ -16,7 +16,7 @@ type StoreRepo struct {
 	conn *gorm.DB
 }
 
-//go:generate mockgen -destination=../mocks/storeModel_mock.go -package=mocks go-mux/models IStoreModel
+//go:generate mockgen -destination=../mocks/storeModel_mock.go -package=mocks DIY2/models IStoreRepo
 type IStoreRepo interface {
 	GetProductsInStore(storeModel *StoreModel, limit, start int) []ProductModel
 	AddProducts(storeModel *StoreModel, products []ProductModel) bool

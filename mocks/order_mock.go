@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	http "net/http"
+	services "DIY2/services"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,25 +35,31 @@ func (m *MockIOrders) EXPECT() *MockIOrdersMockRecorder {
 }
 
 // TopProductsForAllStores mocks base method.
-func (m *MockIOrders) TopProductsForAllStores(arg0 http.ResponseWriter, arg1 *http.Request) {
+func (m *MockIOrders) TopProductsForAllStores() ([]services.TopProductsResponse, error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "TopProductsForAllStores", arg0, arg1)
+	ret := m.ctrl.Call(m, "TopProductsForAllStores")
+	ret0, _ := ret[0].([]services.TopProductsResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // TopProductsForAllStores indicates an expected call of TopProductsForAllStores.
-func (mr *MockIOrdersMockRecorder) TopProductsForAllStores(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockIOrdersMockRecorder) TopProductsForAllStores() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopProductsForAllStores", reflect.TypeOf((*MockIOrders)(nil).TopProductsForAllStores), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopProductsForAllStores", reflect.TypeOf((*MockIOrders)(nil).TopProductsForAllStores))
 }
 
 // TopProductsInStore mocks base method.
-func (m *MockIOrders) TopProductsInStore(arg0 http.ResponseWriter, arg1 *http.Request) {
+func (m *MockIOrders) TopProductsInStore(arg0 int64) ([]int64, error) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "TopProductsInStore", arg0, arg1)
+	ret := m.ctrl.Call(m, "TopProductsInStore", arg0)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // TopProductsInStore indicates an expected call of TopProductsInStore.
-func (mr *MockIOrdersMockRecorder) TopProductsInStore(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockIOrdersMockRecorder) TopProductsInStore(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopProductsInStore", reflect.TypeOf((*MockIOrders)(nil).TopProductsInStore), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TopProductsInStore", reflect.TypeOf((*MockIOrders)(nil).TopProductsInStore), arg0)
 }
